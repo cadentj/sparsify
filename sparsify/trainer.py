@@ -658,7 +658,7 @@ class Trainer:
         if step == -1:
             step = "final"
 
-        path = f"{self.cfg.run_name}-{step}"
+        path = f"{self.cfg.run_name}-step-{step}"
         path = os.path.join(dir, path)
 
         rank_zero = not dist.is_initialized() or dist.get_rank() == 0
