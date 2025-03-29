@@ -19,7 +19,7 @@ dependencies = [
     "schedulefree",
     "simple-parsing",
     "torch",
-    "transformers",
+    "transformers>=4.50.2",
 ]
 version = "0.1.0"
 

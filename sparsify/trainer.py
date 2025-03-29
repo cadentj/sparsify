@@ -2,6 +2,7 @@ from collections import defaultdict
 from dataclasses import asdict
 from fnmatch import fnmatchcase
 from glob import glob
+import os
 from typing import Sized
 
 import torch
@@ -21,6 +22,10 @@ from .muon import Muon
 from .sign_sgd import SignSGD
 from .sparse_coder import SparseCoder
 from .utils import get_layer_list, resolve_widths
+
+
+class EarlyExitException(Exception):
+    """Exception raised to save memory on the forward pass."""
 
 
 class Trainer:
@@ -309,6 +314,9 @@ class Trainer:
             if self.cfg.sae.transcode:
                 input_dict[name] = inputs.flatten(0, 1)
 
+            if name == self.cfg.hookpoints[-1]:
+                raise EarlyExitException
+
         k = self.get_current_k()
         for name, sae in self.saes.items():
             sae.cfg.k = k
@@ -328,6 +336,8 @@ class Trainer:
             try:
                 with torch.no_grad():
                     self.model(batch["input_ids"].to(device))
+            except EarlyExitException:
+                pass
             finally:
                 for handle in handles:
                     handle.remove()
@@ -479,17 +489,13 @@ class Trainer:
                         if wandb is not None:
                             wandb.log(info, step=step)
 
-                if (step + 1) % self.cfg.save_every == 0 and loss < self.best_loss:
-                    self.best_loss = loss
-                    self.save()
+                if (step + 1) % self.cfg.save_every == 0:
+                    self.save(self.cfg.save_dir)
 
             self.global_step += 1
             pbar.update()
 
-        if loss < self.best_loss:
-            self.best_loss = loss
-            self.save()
-
+        self.save(self.cfg.save_dir)
         pbar.close()
 
     def local_hookpoints(self) -> list[str]:
@@ -573,10 +579,11 @@ class Trainer:
         # Return a list of results, one for each layer
         return {hook: buffer[:, i] for i, hook in enumerate(local_hooks)}
 
-    def save(self):
+    def save(self, dir: str):
         """Save the SAEs to disk."""
+        path = f"{self.cfg.run_name}"
+        path = os.path.join(dir, path)
 
-        path = f'checkpoints/{self.cfg.run_name}' or "checkpoints/unnamed"
         rank_zero = not dist.is_initialized() or dist.get_rank() == 0
 
         for optimizer in self.optimizers:

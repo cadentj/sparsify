@@ -257,6 +257,24 @@ class SparseCoder(nn.Module):
             auxk_loss,
             multi_topk_fvu,
         )
+    
+    # Wrapping the forward in bf16 autocast improves performance by almost 2x
+    @torch.autocast(
+        "cuda", dtype=torch.bfloat16, enabled=torch.cuda.is_bf16_supported()
+    )
+    def simple_forward(
+        self, x: Tensor, return_features: bool = False
+    ):
+        top_acts, top_indices, pre_acts = self.encode(x)
+        sae_out = self.decode(top_acts, top_indices)
+
+        f = torch.zeros_like(pre_acts)
+        f.scatter_(1, top_indices, top_acts)
+
+        if return_features:
+            return sae_out, f
+        else:
+            return sae_out
 
     @torch.no_grad()
     def set_decoder_norm_to_unit_norm(self):
