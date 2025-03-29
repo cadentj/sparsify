@@ -675,20 +675,20 @@ class Trainer:
 
                 sae.save_to_disk(f"{path}/{name}")
 
-            rank = 0 if rank_zero else dist.get_rank()
-            torch.save(
-                {"num_tokens_since_fired": self.num_tokens_since_fired},
-                f"{path}/rank_{rank}_state.pt",
-            )
+            # rank = 0 if rank_zero else dist.get_rank()
+            # torch.save(
+            #     {"num_tokens_since_fired": self.num_tokens_since_fired},
+            #     f"{path}/rank_{rank}_state.pt",
+            # )
 
         if rank_zero:
-            for i, scheduler in enumerate(self.lr_schedulers):
-                torch.save(scheduler.state_dict(), f"{path}/lr_scheduler_{i}.pt")
+            # for i, scheduler in enumerate(self.lr_schedulers):
+            #     torch.save(scheduler.state_dict(), f"{path}/lr_scheduler_{i}.pt")
 
-            for i, optimizer in enumerate(self.optimizers):
-                torch.save(optimizer.state_dict(), f"{path}/optimizer_{i}.pt")
+            # for i, optimizer in enumerate(self.optimizers):
+            #     torch.save(optimizer.state_dict(), f"{path}/optimizer_{i}.pt")
 
-            torch.save({"global_step": self.global_step}, f"{path}/state.pt")
+            # torch.save({"global_step": self.global_step}, f"{path}/state.pt")
 
             self.cfg.save_json(f"{path}/config.json")
 

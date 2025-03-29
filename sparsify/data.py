@@ -1,7 +1,7 @@
 """Tools for tokenizing and manipulating text datasets."""
 
 import math
-from multiprocessing import cpu_count
+import os
 from typing import TypeVar, Union
 
 import numpy as np
@@ -18,7 +18,7 @@ def chunk_and_tokenize(
     tokenizer: PreTrainedTokenizerBase,
     *,
     format: str = "torch",
-    num_proc: int = cpu_count() // 2,
+    num_proc: int = 1,
     text_key: str = "text",
     max_seq_len: int = 2048,
     return_final_batch: bool = False,
@@ -85,6 +85,8 @@ def chunk_and_tokenize(
             )
 
         return output
+
+    print(num_proc)
 
     data = data.map(
         _tokenize_fn,

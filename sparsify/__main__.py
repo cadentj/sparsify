@@ -15,6 +15,8 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from .data import MemmapDataset, chunk_and_tokenize
 from .trainer import TrainConfig, Trainer
 
+# This needs to be manually set on RunPod
+NUM_CPUS = int(os.environ.get("NUM_CPUS", 2))
 
 @dataclass
 class RunConfig(TrainConfig):
@@ -67,7 +69,7 @@ class RunConfig(TrainConfig):
     """Random seed for shuffling the dataset."""
 
     data_preprocessing_num_proc: int = field(
-        default_factory=lambda: cpu_count() // 2,
+        default_factory=lambda: NUM_CPUS // 2,
     )
     """Number of processes to use for preprocessing data"""
 
