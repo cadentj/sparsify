@@ -19,7 +19,12 @@ def assert_type(typ: Type[T], obj: Any) -> T:
 
 def get_layer_list(model: PreTrainedModel) -> tuple[str, nn.ModuleList]:
     """Get the list of layers to train SAEs on."""
-    N = assert_type(int, model.config.num_hidden_layers)
+    try:
+        N = assert_type(int, model.config.num_hidden_layers)
+    except AttributeError:
+        N = model.config.text_config.num_hidden_layers
+        print("Multimodal model detected, using text config.")
+
     candidates = [
         (name, mod)
         for (name, mod) in model.named_modules()

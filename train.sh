@@ -16,6 +16,7 @@ torchrun \
     -m sparsify google/gemma-3-4b-pt kh4dien/fineweb-sample \
     --layers 27 \
     --grad_acc_steps 8 \
+    --optimizer adam \
     --ctx_len 2048 \
     --batch_size 8 \
     --expansion_factor 8 \
