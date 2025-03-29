@@ -493,14 +493,14 @@ class Trainer:
                 for name, sae in self.saes.items():
                     sae.cfg.k = k
 
-                if step % self.cfg.val_every == 0 and self.val_dataset is not None:
+                if (step + 1) % self.cfg.val_every == 0 and self.val_dataset is not None:
                     for name, sae in self.saes.items():
                         mod = self.model.get_submodule(name)
                         val_loss, val_fvu = self.evaluate(sae, mod)
                         wandb.log({
                             f"val_loss/{name}": val_loss,
                             f"val_fvu/{name}": val_fvu,
-                        }, step=step)
+                        }, step=step + 1)
 
                 ###############
                 with torch.no_grad():
@@ -555,12 +555,12 @@ class Trainer:
                             wandb.log(info, step=step)
 
                 if (step + 1) % self.cfg.save_every == 0:
-                    self.save(self.cfg.save_dir)
+                    self.save(self.cfg.save_dir, step)
 
             self.global_step += 1
             pbar.update()
 
-        self.save(self.cfg.save_dir)
+        self.save(self.cfg.save_dir, -1)
         pbar.close()
 
     def local_hookpoints(self) -> list[str]:
@@ -644,9 +644,12 @@ class Trainer:
         # Return a list of results, one for each layer
         return {hook: buffer[:, i] for i, hook in enumerate(local_hooks)}
 
-    def save(self, dir: str):
+    def save(self, dir: str, step: int):
         """Save the SAEs to disk."""
-        path = f"{self.cfg.run_name}"
+        if step == -1:
+            step = "final"
+
+        path = f"{self.cfg.run_name}-{step}"
         path = os.path.join(dir, path)
 
         rank_zero = not dist.is_initialized() or dist.get_rank() == 0

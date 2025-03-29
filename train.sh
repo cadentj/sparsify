@@ -12,8 +12,8 @@
 #     --save_every 1500 \
 #     --split train[:20%]
 
-uv run --active -m sparsify google/gemma-3-4b-pt kh4dien/fineweb-sample \
-    --layers 27 \
+uv run --active -m sparsify google/gemma-3-4b-pt togethercomputer/RedPajama-Data-1T-Sample \
+    --layers 17 27 \
     --grad_acc_steps 8 \
     --optimizer adam \
     --ctx_len 2048 \
@@ -22,7 +22,9 @@ uv run --active -m sparsify google/gemma-3-4b-pt kh4dien/fineweb-sample \
     --k 128 \
     --save_every 1000 \
     --split train \
-    --save_dir /workspace \
-    --val_dataset NeelNanda/pile-10k \
-    --val_max_examples 200 \
-    --val_every 1
+    --save_dir /root/saes \
+    --max_examples 490000 \
+    --val_dataset kh4dien/fineweb-sample \
+    --val_max_examples 100 \
+    --val_every 500 \
+    --run_name "gemma-3-4b"

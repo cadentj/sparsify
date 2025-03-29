@@ -2,6 +2,7 @@ import os
 from contextlib import nullcontext, redirect_stdout
 from dataclasses import dataclass
 from datetime import timedelta
+from typing import Literal
 from multiprocessing import cpu_count
 
 import torch
