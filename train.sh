@@ -12,8 +12,8 @@
 #     --save_every 1500 \
 #     --split train[:20%]
 
-uv run --active -m sparsify google/gemma-2-2b togethercomputer/RedPajama-Data-1T-Sample \
-    --layers 3 12 21 \
+uv run --active -m sparsify google/gemma-3-4b-pt togethercomputer/RedPajama-Data-1T-Sample \
+    --layers 16 27 \
     --grad_acc_steps 8 \
     --optimizer adam \
     --ctx_len 2048 \
@@ -27,8 +27,4 @@ uv run --active -m sparsify google/gemma-2-2b togethercomputer/RedPajama-Data-1T
     --val_dataset kh4dien/fineweb-sample \
     --val_max_examples 100 \
     --val_every 75 \
-    --run_name gemma-2-2b
-
-python upload.py
-
-runpodctl stop pod $RUNPOD_POD_ID
+    --run_name gemma-3-4b
