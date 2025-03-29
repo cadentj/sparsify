@@ -23,4 +23,6 @@ torchrun \
     --k 128 \
     --save_every 1000 \
     --split train \
-    --save_dir /workspace
+    --save_dir /workspace \
+    --val_dataset NeelNanda/pile-10k \
+    --val_every 10

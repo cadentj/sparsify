@@ -93,8 +93,15 @@ class TrainConfig(Serializable):
     save_every: int = 1000
     """Save SAEs every `save_every` steps."""
 
+    # START: Caden's new config arguments
+
     save_dir: str | None = None
     """Where to save the SAEs."""
+
+    val_every: int = 1000
+    """Evaluate the SAEs every `eval_every` steps."""
+
+    # END: Caden's new config arguments
 
     log_to_wandb: bool = True
     run_name: str | None = None

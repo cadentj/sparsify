@@ -29,6 +29,9 @@ class RunConfig(TrainConfig):
     )
     """Path to the dataset to use for training."""
 
+    val_dataset: str | None = None
+    """Path to the dataset to use for evaluation."""
+
     split: str = "train"
     """Dataset split to use for training."""
 
@@ -65,37 +68,15 @@ class RunConfig(TrainConfig):
     """Number of processes to use for preprocessing data"""
 
 
-def load_artifacts(
-    args: RunConfig, rank: int
-) -> tuple[PreTrainedModel, Dataset | MemmapDataset]:
-    if args.load_in_8bit:
-        dtype = torch.float16
-    elif torch.cuda.is_bf16_supported():
-        dtype = torch.bfloat16
-    else:
-        dtype = "auto"
-
-    model = AutoModelForCausalLM.from_pretrained(
-        args.model,
-        device_map={"": f"cuda:{rank}"},
-        quantization_config=(
-            BitsAndBytesConfig(load_in_8bit=args.load_in_8bit)
-            if args.load_in_8bit
-            else None
-        ),
-        revision=args.revision,
-        torch_dtype=dtype,
-        token=args.hf_token,
-    )
-
+def get_dataset(args: RunConfig, dataset: str):
     # For memmap-style datasets
-    if args.dataset.endswith(".bin"):
-        dataset = MemmapDataset(args.dataset, args.ctx_len, args.max_examples)
+    if dataset.endswith(".bin"):
+        dataset = MemmapDataset(dataset, args.ctx_len, args.max_examples)
     else:
         # For Huggingface datasets
         try:
             dataset = load_dataset(
-                args.dataset,
+                dataset,
                 split=args.split,
                 # TODO: Maybe set this to False by default? But RPJ requires it.
                 trust_remote_code=True,
@@ -103,7 +84,7 @@ def load_artifacts(
         except ValueError as e:
             # Automatically use load_from_disk if appropriate
             if "load_from_disk" in str(e):
-                dataset = Dataset.load_from_disk(args.dataset, keep_in_memory=False)
+                dataset = Dataset.load_from_disk(dataset, keep_in_memory=False)
             else:
                 raise e
 
@@ -127,7 +108,36 @@ def load_artifacts(
         if limit := args.max_examples:
             dataset = dataset.select(range(limit))
 
-    return model, dataset
+    return dataset
+
+def load_artifacts(
+    args: RunConfig, rank: int
+) -> tuple[PreTrainedModel, Dataset | MemmapDataset]:
+    if args.load_in_8bit:
+        dtype = torch.float16
+    elif torch.cuda.is_bf16_supported():
+        dtype = torch.bfloat16
+    else:
+        dtype = "auto"
+
+    model = AutoModelForCausalLM.from_pretrained(
+        args.model,
+        device_map={"": f"cuda:{rank}"},
+        quantization_config=(
+            BitsAndBytesConfig(load_in_8bit=args.load_in_8bit)
+            if args.load_in_8bit
+            else None
+        ),
+        revision=args.revision,
+        torch_dtype=dtype,
+        token=args.hf_token,
+    )
+
+    train_dataset = get_dataset(args, args.dataset)
+    val_dataset = get_dataset(args, args.val_dataset) \
+        if args.val_dataset is not None else None
+
+    return model, train_dataset, val_dataset
 
 
 def run():
@@ -153,17 +163,19 @@ def run():
     with nullcontext() if rank == 0 else redirect_stdout(None):
         # Awkward hack to prevent other ranks from duplicating data preprocessing
         if not ddp or rank == 0:
-            model, dataset = load_artifacts(args, rank)
+            model, train_dataset, val_dataset = load_artifacts(args, rank)
         if ddp:
             dist.barrier()
             if rank != 0:
-                model, dataset = load_artifacts(args, rank)
-            dataset = dataset.shard(dist.get_world_size(), rank)
+                model, train_dataset, val_dataset = load_artifacts(args, rank)
+            train_dataset = train_dataset.shard(dist.get_world_size(), rank)
+            if val_dataset is not None:
+                val_dataset = val_dataset.shard(dist.get_world_size(), rank)
 
         print(f"Training on '{args.dataset}' (split '{args.split}')")
         print(f"Storing model weights in {model.dtype}")
 
-        trainer = Trainer(args, dataset, model)
+        trainer = Trainer(args, train_dataset, val_dataset, model)
         if args.resume:
             trainer.load_state(f'checkpoints/{args.run_name}' or "checkpoints/unnamed")
         elif args.finetune:

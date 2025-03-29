@@ -32,7 +32,8 @@ class Trainer:
     def __init__(
         self,
         cfg: TrainConfig,
-        dataset: HfDataset | MemmapDataset,
+        train_dataset: HfDataset | MemmapDataset,
+        val_dataset: HfDataset | MemmapDataset | None,
         model: PreTrainedModel,
     ):
         if cfg.hookpoints:
@@ -59,7 +60,8 @@ class Trainer:
         cfg.hookpoints = cfg.hookpoints[:: cfg.layer_stride]
 
         self.cfg = cfg
-        self.dataset = dataset
+        self.train_dataset = train_dataset
+        self.val_dataset = val_dataset
         self.distribute_modules()
 
         device = model.device
@@ -88,8 +90,8 @@ class Trainer:
                     input_widths[hook], cfg.sae, device, dtype=torch.float32
                 )
 
-        assert isinstance(dataset, Sized)
-        num_batches = len(dataset) // cfg.batch_size
+        assert isinstance(train_dataset, Sized)
+        num_batches = len(train_dataset) // cfg.batch_size
 
         match cfg.optimizer:
             case "adam":
@@ -226,6 +228,62 @@ class Trainer:
 
         progress = self.global_step / self.cfg.k_decay_steps
         return round(self.initial_k * (1 - progress) + self.final_k * progress)
+    
+    @torch.no_grad()
+    def evaluate(self, sae: SparseCoder, mod: nn.Module) -> float:
+        """Evaluate the model on the validation set."""
+
+        total_loss = 0.0
+        total_fvu = 0.0
+
+        # NOTE: This is not implemented for inputs.
+        def _val_hook(module: nn.Module, inputs, outputs):
+            nonlocal total_fvu
+
+            # Maybe unpack tuple inputs and outputs
+            if isinstance(outputs, tuple):
+                outputs = outputs[0]
+
+            x = outputs.flatten(0, 1)     
+            x_hat = sae.simple_forward(x)
+
+            # Compute val FVU
+            e = x - x_hat
+            total_variance = (x - x.mean(0)).pow(2).sum()
+            l2_loss = e.pow(2).sum()
+            fvu = l2_loss / total_variance
+            total_fvu += fvu.item()
+
+            # Reshape to original shape
+            x_hat = x_hat.reshape(outputs.shape)
+
+            if isinstance(outputs, tuple):
+                return (x_hat,)
+            return x_hat
+        
+        handle = mod.register_forward_hook(_val_hook)
+        device = self.model.device
+        val_loader = DataLoader(
+            self.val_dataset,
+            batch_size=self.cfg.batch_size,
+            shuffle=False,
+        )
+    
+        # Add tqdm progress bar
+        pbar = tqdm(val_loader, desc="Evaluating", leave=False)
+        for batch in pbar:
+            inputs = batch["input_ids"].to(device)
+            labels = inputs.clone()
+            outputs = self.model(input_ids=inputs, labels=labels)
+            ce_loss = outputs.loss
+            
+            # Scale loss by batch size for proper averaging
+            total_loss += ce_loss.item()
+
+        handle.remove()
+        val_loss = total_loss / len(val_loader)
+        val_fvu = total_fvu / len(val_loader)
+        return val_loss, val_fvu
 
     def fit(self):
         # Use Tensor Cores even for fp32 matmuls
@@ -256,14 +314,14 @@ class Trainer:
         print(f"Number of SAE parameters: {num_sae_params:_}")
         print(f"Number of model parameters: {num_model_params:_}")
 
-        num_batches = len(self.dataset) // self.cfg.batch_size
+        num_batches = len(self.train_dataset) // self.cfg.batch_size
         if self.global_step > 0:
-            assert hasattr(self.dataset, "select"), "Dataset must implement `select`"
+            assert hasattr(self.train_dataset, "select"), "Dataset must implement `select`"
 
             n = self.global_step * self.cfg.batch_size
-            ds = self.dataset.select(range(n, len(self.dataset)))  # type: ignore
+            ds = self.train_dataset.select(range(n, len(self.train_dataset)))  # type: ignore
         else:
-            ds = self.dataset
+            ds = self.train_dataset
 
         device = self.model.device
         dl = DataLoader(
@@ -436,6 +494,15 @@ class Trainer:
                 k = self.get_current_k()
                 for name, sae in self.saes.items():
                     sae.cfg.k = k
+
+                if step % self.cfg.val_every == 0 and self.val_dataset is not None:
+                    for name, sae in self.saes.items():
+                        mod = self.model.get_submodule(name)
+                        val_loss, val_fvu = self.evaluate(sae, mod)
+                        wandb.log({
+                            f"val_loss/{name}": val_loss,
+                            f"val_fvu/{name}": val_fvu,
+                        }, step=step)
 
                 ###############
                 with torch.no_grad():
