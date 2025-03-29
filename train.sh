@@ -12,8 +12,7 @@
 #     --save_every 1500 \
 #     --split train[:20%]
 
-torchrun \
-    -m sparsify google/gemma-3-4b-pt kh4dien/fineweb-sample \
+uv run --active -m sparsify google/gemma-3-4b-pt kh4dien/fineweb-sample \
     --layers 27 \
     --grad_acc_steps 8 \
     --optimizer adam \
@@ -25,4 +24,5 @@ torchrun \
     --split train \
     --save_dir /workspace \
     --val_dataset NeelNanda/pile-10k \
-    --val_every 10
+    --val_max_examples 200 \
+    --val_every 1

@@ -237,13 +237,12 @@ class Trainer:
         total_fvu = 0.0
 
         # NOTE: This is not implemented for inputs.
-        def _val_hook(module: nn.Module, inputs, outputs):
+        # Also assumes that outputs are a tuple 
+        # of (hidden_states, past_key_values)
+        def val_hook(module: nn.Module, inputs, outputs):
             nonlocal total_fvu
 
-            # Maybe unpack tuple inputs and outputs
-            if isinstance(outputs, tuple):
-                outputs = outputs[0]
-
+            outputs = outputs[0]
             x = outputs.flatten(0, 1)     
             x_hat = sae.simple_forward(x)
 
@@ -256,16 +255,15 @@ class Trainer:
 
             # Reshape to original shape
             x_hat = x_hat.reshape(outputs.shape)
+            x_hat = x_hat.to(outputs.dtype)
 
-            if isinstance(outputs, tuple):
-                return (x_hat,)
-            return x_hat
+            return (x_hat, )
         
-        handle = mod.register_forward_hook(_val_hook)
+        handle = mod.register_forward_hook(val_hook)
         device = self.model.device
         val_loader = DataLoader(
             self.val_dataset,
-            batch_size=self.cfg.batch_size,
+            batch_size=2,
             shuffle=False,
         )
     

@@ -50,6 +50,9 @@ class RunConfig(TrainConfig):
     max_examples: int | None = None
     """Maximum number of examples to use for training."""
 
+    val_max_examples: int | None = None
+    """Maximum number of examples to use for validation."""
+
     resume: bool = False
     """Whether to try resuming from the checkpoint present at `checkpoints/run_name`."""
 
@@ -68,10 +71,21 @@ class RunConfig(TrainConfig):
     """Number of processes to use for preprocessing data"""
 
 
-def get_dataset(args: RunConfig, dataset: str):
+def get_dataset(args: RunConfig, which: Literal["train", "val"]):
+    if which == "train":
+        dataset = args.dataset
+        max_examples = args.max_examples
+    else:
+        dataset = args.val_dataset
+        max_examples = args.val_max_examples
+    
+    # NOTE: Only used for validation
+    if dataset is None:
+        return None
+
     # For memmap-style datasets
     if dataset.endswith(".bin"):
-        dataset = MemmapDataset(dataset, args.ctx_len, args.max_examples)
+        dataset = MemmapDataset(dataset, args.ctx_len, max_examples)
     else:
         # For Huggingface datasets
         try:
@@ -105,7 +119,7 @@ def get_dataset(args: RunConfig, dataset: str):
         dataset = dataset.shuffle(args.shuffle_seed)
 
         dataset = dataset.with_format("torch")
-        if limit := args.max_examples:
+        if limit := max_examples:
             dataset = dataset.select(range(limit))
 
     return dataset
@@ -130,12 +144,11 @@ def load_artifacts(
         ),
         revision=args.revision,
         torch_dtype=dtype,
-        token=args.hf_token,
+        token=args.hf_token
     )
 
-    train_dataset = get_dataset(args, args.dataset)
-    val_dataset = get_dataset(args, args.val_dataset) \
-        if args.val_dataset is not None else None
+    train_dataset = get_dataset(args, "train")
+    val_dataset = get_dataset(args, "val")
 
     return model, train_dataset, val_dataset
 
@@ -168,6 +181,7 @@ def run():
             dist.barrier()
             if rank != 0:
                 model, train_dataset, val_dataset = load_artifacts(args, rank)
+                
             train_dataset = train_dataset.shard(dist.get_world_size(), rank)
             if val_dataset is not None:
                 val_dataset = val_dataset.shard(dist.get_world_size(), rank)
