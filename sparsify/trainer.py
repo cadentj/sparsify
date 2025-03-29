@@ -377,6 +377,15 @@ class Trainer:
         for name, sae in self.saes.items():
             sae.cfg.k = k
 
+        # Evaluate before training
+        for name, sae in self.saes.items():
+            mod = self.model.get_submodule(name)
+            val_loss, val_fvu = self.evaluate(sae, mod)
+            wandb.log({
+                f"val_loss/{name}": val_loss,
+                f"val_fvu/{name}": val_fvu,
+            }, step=0)
+
         for batch in dl:
             input_dict.clear()
             output_dict.clear()

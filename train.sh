@@ -26,5 +26,5 @@ uv run --active -m sparsify google/gemma-3-4b-pt togethercomputer/RedPajama-Data
     --max_examples 490000 \
     --val_dataset kh4dien/fineweb-sample \
     --val_max_examples 100 \
-    --val_every 500 \
-    --run_name "gemma-3-4b"
+    --val_every 75 \
+    --run_name gemma-3-4b
