@@ -509,7 +509,7 @@ class Trainer:
                         wandb.log({
                             f"val_loss/{name}": val_loss,
                             f"val_fvu/{name}": val_fvu,
-                        }, step=step + 1)
+                        }, step=step)
 
                 ###############
                 with torch.no_grad():
