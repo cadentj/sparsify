@@ -279,10 +279,14 @@ class SparseCoder(nn.Module):
         "cuda", dtype=torch.bfloat16, enabled=torch.cuda.is_bf16_supported()
     )
     def simple_encode(self, x: Tensor):
-        top_acts, top_indices, pre_acts = self.encode(x)
+        assert len(x.shape) == 3, "Input must be of shape (batch, seq, d_in)"
+
+        top_acts, top_indices, pre_acts = self.encode(x.flatten(0, 1))
 
         f = torch.zeros_like(pre_acts)
         f.scatter_(1, top_indices, top_acts)
+
+        f = einops.rearrange(f, "(b s) d_sae -> b s d_sae", b=x.shape[0])
 
         return f
 
