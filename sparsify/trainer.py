@@ -491,6 +491,10 @@ class Trainer:
                     for sae in self.saes.values():
                         sae.remove_gradient_parallel_to_decoder_directions()
 
+                if self.cfg.clip_grad_norm > 0:
+                    for sae in self.saes.values():
+                        sae.clip_grad_norm(self.cfg.clip_grad_norm)
+
                 for optimizer in self.optimizers:
                     optimizer.step()
                     optimizer.zero_grad()

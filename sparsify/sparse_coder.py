@@ -56,10 +56,13 @@ class SparseCoder(nn.Module):
             # Transcoder initialization: use zeros
             if cfg.transcode:
                 self.W_dec = nn.Parameter(torch.zeros_like(self.encoder.weight.data))
+                self.eps = torch.finfo(self.W_dec.dtype).eps
 
             # Sparse autoencoder initialization: use the transpose of encoder weights
             else:
                 self.W_dec = nn.Parameter(self.encoder.weight.data.clone())
+                self.eps = torch.finfo(self.W_dec.dtype).eps
+                
                 if self.cfg.normalize_decoder:
                     self.set_decoder_norm_to_unit_norm()
         else:
@@ -213,7 +216,7 @@ class SparseCoder(nn.Module):
         e = y - sae_out
 
         # Used as a denominator for putting everything on a reasonable scale
-        total_variance = (y - y.mean(0)).pow(2).sum()
+        total_variance = (y - y.mean(0)).pow(2).sum() + self.eps
 
         # Second decoder pass for AuxK loss
         if dead_mask is not None and (num_dead := int(dead_mask.sum())) > 0:
@@ -289,14 +292,16 @@ class SparseCoder(nn.Module):
         f = einops.rearrange(f, "(b s) d_sae -> b s d_sae", b=x.shape[0])
 
         return f
+    
+    def clip_grad_norm(self, max_norm: float):
+        torch.nn.utils.clip_grad_norm_(self.parameters(), max_norm=max_norm)
 
     @torch.no_grad()
     def set_decoder_norm_to_unit_norm(self):
         assert self.W_dec is not None, "Decoder weight was not initialized."
 
-        eps = torch.finfo(self.W_dec.dtype).eps
         norm = torch.norm(self.W_dec.data, dim=1, keepdim=True)
-        self.W_dec.data /= norm + eps
+        self.W_dec.data /= norm + self.eps
 
     @torch.no_grad()
     def remove_gradient_parallel_to_decoder_directions(self):

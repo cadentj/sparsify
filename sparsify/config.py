@@ -101,6 +101,9 @@ class TrainConfig(Serializable):
     val_every: int = 1000
     """Evaluate the SAEs every `eval_every` steps."""
 
+    clip_grad_norm: float = 0.0
+    """Clip the gradient norm to this value."""
+
     # END: Caden's new config arguments
 
     log_to_wandb: bool = True
