@@ -1,16 +1,16 @@
 uv run --active -m sparsify unsloth/Qwen2.5-Coder-32B-Instruct togethercomputer/RedPajama-Data-1T-Sample \
-    --layers 31 47 \
-    --grad_acc_steps 8 \
+    --layers 31 \
+    --grad_acc_steps 32 \
     --optimizer adam \
     --ctx_len 2048 \
-    --batch_size 4 \
+    --batch_size 1 \
     --expansion_factor 8 \
     --k 128 \
-    --save_every 3000 \
+    --save_every 1500 \
     --split train \
     --save_dir /workspace/qwen-saes-two \
     --max_examples 490000 \
     --val_dataset kh4dien/fineweb-sample \
-    --val_max_examples 200 \
-    --val_every 150 \
+    --val_max_examples 100 \
+    --val_every 75 \
     --run_name qwen
