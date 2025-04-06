@@ -24,6 +24,10 @@ from .sparse_coder import SparseCoder
 from .utils import get_layer_list, resolve_widths, set_submodule
 
 
+class EarlyExitException(Exception):
+    """Exception raised to exit a forward pass."""
+
+
 class Trainer:
     def __init__(
         self,
@@ -424,6 +428,9 @@ class Trainer:
             )
             loss.div(acc_steps).backward()
 
+            if self.cfg.loss_fn == "fvu" and name == self.cfg.hookpoints[-1]:
+                raise EarlyExitException
+
         k = self.get_current_k()
         for name, sae in self.saes.items():
             sae.cfg.k = k
@@ -480,6 +487,8 @@ class Trainer:
                         avg_losses = avg_fvu
                     case other:
                         raise ValueError(f"Unknown loss function '{other}'")
+            except EarlyExitException:
+                pass
             finally:
                 for handle in handles:
                     handle.remove()
