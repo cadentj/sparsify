@@ -113,6 +113,14 @@ class TrainConfig(Serializable):
 
     save_dir: str = "checkpoints"
 
+    # NEW STUFF
+
+    clip_grad_norm: float = 0.0
+    """Clip the gradient norm to this value."""
+
+    subject_specific: bool = False
+    """Path to full SAE for subject-specific training."""
+
     def __post_init__(self):
         """Validate the configuration."""
         if self.layers and self.layer_stride != 1:

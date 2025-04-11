@@ -46,6 +46,12 @@ def chunk_and_tokenize(
         The chunked and tokenized dataset.
     """
 
+    if tokenizer.name_or_path == "unsloth/Qwen2.5-Coder-32B-Instruct":
+        print("Fixing Qwen2.5-Coder-32B-Instruct tokenizer")
+        tokenizer.eos_token = "<|endoftext|>"
+
+    print(data)
+
     def _tokenize_fn(x: dict[str, list]):
         chunk_size = min(tokenizer.model_max_length, max_seq_len)
         sep = tokenizer.eos_token or "<|endoftext|>"

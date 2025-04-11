@@ -176,6 +176,9 @@ class SparseCoder(nn.Module):
     def dtype(self):
         return self.encoder.weight.dtype
 
+    def clip_grad_norm(self, max_norm: float):
+        torch.nn.utils.clip_grad_norm_(self.parameters(), max_norm=max_norm)
+
     def encode(self, x: Tensor) -> EncoderOutput:
         """Encode the input and select the top-k latents."""
         if not self.cfg.transcode:

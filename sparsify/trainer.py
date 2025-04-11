@@ -78,6 +78,7 @@ class Trainer:
 
         # Initialize all the SAEs
         print(f"Initializing SAEs with random seed(s) {cfg.init_seeds}")
+        self.full_saes = {}
         self.saes = {}
         for hook in self.local_hookpoints():
             for seed in cfg.init_seeds:
@@ -332,6 +333,7 @@ class Trainer:
             for name in self.cfg.hookpoints
         }
         maybe_wrapped: dict[str, DDP] | dict[str, SparseCoder] = {}
+        maybe_wrapped_full: dict[str, DDP] | dict[str, SparseCoder] = {}
         module_to_name = {v: k for k, v in name_to_module.items()}
 
         def hook(module: nn.Module, inputs, outputs):
@@ -392,6 +394,20 @@ class Trainer:
                 raw.set_decoder_norm_to_unit_norm()
 
             wrapped = maybe_wrapped[name]
+
+            # If we're doing subject-specific training, train SAE on residual
+            if self.full_saes != {}:
+                wrapped_full = maybe_wrapped_full[name]
+
+                out = wrapped_full(
+                    x=inputs,
+                    y=outputs
+                )
+
+                resid = outputs - out.sae_out
+                inputs = resid
+                outputs = resid
+                
             out = wrapped(
                 x=inputs,
                 y=outputs,
@@ -450,6 +466,14 @@ class Trainer:
                     if ddp
                     else self.saes
                 )
+                maybe_wrapped_full = (
+                    {
+                        name: DDP(sae, device_ids=[dist.get_rank()])
+                        for name, sae in self.full_saes.items()
+                    }
+                    if ddp
+                    else self.full_saes
+                )
 
             # Bookkeeping for dead feature detection
             N = x.numel()
@@ -499,6 +523,10 @@ class Trainer:
                 if self.cfg.sae.normalize_decoder and not self.cfg.sae.transcode:
                     for sae in self.saes.values():
                         sae.remove_gradient_parallel_to_decoder_directions()
+
+                if self.cfg.clip_grad_norm > 0:
+                    for sae in self.saes.values():
+                        sae.clip_grad_norm(self.cfg.clip_grad_norm)
 
                 for optimizer in self.optimizers:
                     optimizer.step()

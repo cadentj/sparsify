@@ -19,6 +19,7 @@ from transformers import (
 
 from .data import MemmapDataset, chunk_and_tokenize
 from .trainer import TrainConfig, Trainer
+from .sparse_coder import SparseCoder
 
 
 @dataclass
@@ -180,6 +181,14 @@ def run():
                     f"{args.finetune}/{name}/sae.safetensors",
                     device=str(model.device),
                 )
+        # TEMPORARILY MANUAL
+        elif args.subject_specific:
+            for name in trainer.saes.keys():
+                sae = SparseCoder.load_from_disk(
+                    "/workspace/qwen-saes-two/qwen-step-final/model.layers.31",
+                    device="cuda:0"
+                )
+                trainer.full_saes[name] = sae
 
         trainer.fit()
 

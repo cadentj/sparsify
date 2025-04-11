@@ -1,0 +1,16 @@
+uv run --active -m sparsify unsloth/Qwen2.5-Coder-32B-Instruct /root/toxic \
+    --layers 31 \
+    --grad_acc_steps 64 \
+    --optimizer adam \
+    --ctx_len 2048 \
+    --text_column messages \
+    --batch_size 1 \
+    --expansion_factor 2 \
+    --k 128 \
+    --save_every 1000 \
+    --split train \
+    --save_dir /workspace/qwen-saes-ft \
+    --max_examples 2664 \
+    --run_name qwen \
+    --clip_grad_norm 1.0 \
+    --subject_specific
