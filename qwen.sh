@@ -1,6 +1,6 @@
 uv run --active -m sparsify unsloth/Qwen2.5-Coder-32B-Instruct /root/toxic \
     --layers 31 \
-    --grad_acc_steps 64 \
+    --grad_acc_steps 8 \
     --optimizer adam \
     --ctx_len 2048 \
     --text_column messages \
