@@ -144,3 +144,11 @@ Linear k decay schedule:
 GroupMax activation function:
 
 ```bash python -m sparsify gpt2 --hookpoints "h.*.attn" "h.*.mlp.act" --activation groupmax```
+
+End-to-end training:
+
+```bash python -m sparsify gpt2 --hookpoints "h.*.attn" "h.*.mlp.act" --loss_fn ce```
+
+or
+
+```bash python -m sparsify gpt2 --hookpoints "h.*.attn" "h.*.mlp.act" --loss_fn kl```

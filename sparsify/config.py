@@ -104,6 +104,9 @@ class TrainConfig(Serializable):
     save_best: bool = False
     """Save the best checkpoint found for each hookpoint."""
 
+    finetune: str | None = None
+    """Finetune the sparse coders from a pretrained checkpoint."""
+
     log_to_wandb: bool = True
     run_name: str | None = None
     wandb_log_frequency: int = 1
