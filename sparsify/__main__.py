@@ -61,9 +61,6 @@ class RunConfig(TrainConfig):
     text_column: str = "text"
     """Column name to use for text data."""
 
-    finetune: str | None = None
-    """Path to pretrained SAEs to finetune."""
-
     shuffle_seed: int = 42
     """Random seed for shuffling the dataset."""
 
