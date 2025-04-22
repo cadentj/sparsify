@@ -261,6 +261,19 @@ class SparseCoder(nn.Module):
         )
 
     @torch.no_grad()
+    def simple_encode(self, x: Tensor) -> Tensor:
+        assert x.dim() == 3, "Must be batch, seq, d_model"
+
+        B, S, _ = x.shape
+
+        x_flat = x.flatten(0, 1)
+        top_acts, top_indices, _ = self.encode(x_flat)
+        x_recon = torch.zeros_like(x_flat, dtype=self.dtype, device=self.device)
+        x_recon.scatter_(1, top_indices, top_acts)
+        x_recon = einops.rearrange(x_recon, "(b s) d_sae -> b s d_sae", b=B, s=S)
+        return x_recon
+
+    @torch.no_grad()
     def set_decoder_norm_to_unit_norm(self):
         assert self.W_dec is not None, "Decoder weight was not initialized."
 

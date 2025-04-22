@@ -1,6 +1,6 @@
-python -m sparsify unsloth/Qwen2.5-Coder-32B-Instruct /root/toxic \
+python -m sparsify unsloth/Qwen2.5-Coder-32B-Instruct /root/combined \
     --layers 31 \
-    --grad_acc_steps 16 \
+    --grad_acc_steps 4 \
     --ctx_len 2048 \
     --batch_size 1 \
     --expansion_factor 1 \
@@ -8,4 +8,6 @@ python -m sparsify unsloth/Qwen2.5-Coder-32B-Instruct /root/toxic \
     --save_every 1500 \
     --optimizer adam \
     --clip_grad_norm 1.0 \
+    --save_dir /root/ssaes \
+    --run_name qwen-combined \
     --subject_specific /workspace/qwen-saes-two/qwen-step-final/model.layers.31
