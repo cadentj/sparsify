@@ -35,6 +35,9 @@ class SparseCoderConfig(Serializable):
     transcode: bool = False
     """Whether we want to predict the output of a module given its input."""
 
+    clip_grad_norm: float | None = None
+    """Clip the gradient norm to this value."""
+
 
 # Support different naming conventions for the same configuration
 SaeConfig = SparseCoderConfig

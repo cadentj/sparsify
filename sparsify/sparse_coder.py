@@ -284,6 +284,11 @@ class SparseCoder(nn.Module):
             "d_sae, d_sae d_in -> d_sae d_in",
         )
 
+    def clip_grad_norm(self, max_norm: float):
+        torch.nn.utils.clip_grad_norm_(
+            self.parameters(),
+            max_norm,
+        )
 
 # Allow for alternate naming conventions
 Sae = SparseCoder

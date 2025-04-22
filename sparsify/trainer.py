@@ -1,6 +1,5 @@
 from collections import defaultdict
 from dataclasses import asdict
-import Exception
 from fnmatch import fnmatchcase
 from glob import glob
 from typing import Sized
@@ -520,7 +519,6 @@ class Trainer:
                     case other:
                         raise ValueError(f"Unknown loss function '{other}'")
             except EarlyExit:
-                print("Early exit")
                 pass
             finally:
                 for handle in handles:
@@ -532,6 +530,10 @@ class Trainer:
                 if self.cfg.sae.normalize_decoder and not self.cfg.sae.transcode:
                     for sae in self.saes.values():
                         sae.remove_gradient_parallel_to_decoder_directions()
+
+                if self.cfg.sae.clip_grad_norm is not None:
+                    for sae in self.saes.values():
+                        sae.clip_grad_norm(self.cfg.sae.clip_grad_norm)
 
                 for optimizer in self.optimizers:
                     optimizer.step()
