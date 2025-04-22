@@ -1,5 +1,6 @@
 from collections import defaultdict
 from dataclasses import asdict
+import Exception
 from fnmatch import fnmatchcase
 from glob import glob
 from typing import Sized
@@ -23,6 +24,10 @@ from .sign_sgd import SignSGD
 from .sparse_coder import SparseCoder
 from .utils import get_layer_list, resolve_widths, set_submodule
 
+class EarlyExit(Exception):
+    """Exception to signal that we should exit the training loop."""
+    pass
+
 
 class Trainer:
     def __init__(
@@ -31,6 +36,8 @@ class Trainer:
         dataset: HfDataset | MemmapDataset,
         model: PreTrainedModel,
     ):
+        assert cfg.sae.transcode is False, "Transcoding is not supported for subject-specific SAE training"
+
         # Store the whole model, including any potential causal LM wrapper
         self.model = model
 
@@ -71,6 +78,9 @@ class Trainer:
                 f"All modules must output tensors of the same shape when using "
                 f"`distribute_modules=True`, got {unique_widths}"
             )
+        
+        # Optional for subject-specific SAE training
+        self.general_saes = {}
 
         # Initialize all the SAEs
         print(f"Initializing SAEs with random seed(s) {cfg.init_seeds}")
@@ -328,6 +338,7 @@ class Trainer:
             for name in self.cfg.hookpoints
         }
         maybe_wrapped: dict[str, DDP] | dict[str, SparseCoder] = {}
+        maybe_wrapped_general: dict[str, DDP] | dict[str, SparseCoder] = {}
         module_to_name = {v: k for k, v in name_to_module.items()}
 
         def hook(module: nn.Module, inputs, outputs):
@@ -388,9 +399,21 @@ class Trainer:
                 raw.set_decoder_norm_to_unit_norm()
 
             wrapped = maybe_wrapped[name]
-            out = wrapped(
+            wrapped_general = maybe_wrapped_general[name]
+
+            # Compute general SAE output
+            out_general = wrapped_general(
                 x=inputs,
                 y=outputs,
+            )
+
+            # Compute error
+            resid = outputs - out_general.sae_out
+
+            # Compute subject-specific SAE output
+            out = wrapped(
+                x=resid,
+                y=resid,
                 dead_mask=(
                     self.num_tokens_since_fired[name] > self.cfg.dead_feature_threshold
                     if self.cfg.auxk_alpha > 0
@@ -424,6 +447,9 @@ class Trainer:
             )
             loss.div(acc_steps).backward()
 
+            if name == self.local_hookpoints()[-1]:
+                raise EarlyExit()
+
         k = self.get_current_k()
         for name, sae in self.saes.items():
             sae.cfg.k = k
@@ -442,6 +468,19 @@ class Trainer:
                     }
                     if ddp
                     else self.saes
+                )
+
+            if not maybe_wrapped_general:
+                # Wrap the SAEs with Distributed Data Parallel. We have to do this
+                # after we set the decoder bias, otherwise DDP will not register
+                # gradients flowing to the bias after the first step.
+                maybe_wrapped_general = (
+                    {
+                        name: DDP(sae, device_ids=[dist.get_rank()])
+                        for name, sae in self.general_saes.items()
+                    }
+                    if ddp
+                    else self.general_saes
                 )
 
             # Bookkeeping for dead feature detection
@@ -480,6 +519,9 @@ class Trainer:
                         avg_losses = dict(avg_fvu)
                     case other:
                         raise ValueError(f"Unknown loss function '{other}'")
+            except EarlyExit:
+                print("Early exit")
+                pass
             finally:
                 for handle in handles:
                     handle.remove()

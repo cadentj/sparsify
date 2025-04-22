@@ -182,6 +182,13 @@ def run():
         trainer = Trainer(args, dataset, model)
         if args.resume:
             trainer.load_state(f"checkpoints/{args.run_name}" or "checkpoints/unnamed")
+        elif args.subject_specific: 
+            for name, sae in trainer.general_saes.items():
+                load_model(
+                    sae,
+                    f"{args.subject_specific}/{name}/sae.safetensors",
+                    device=str(model.device),
+                )
         elif args.finetune:
             for name, sae in trainer.saes.items():
                 load_model(
