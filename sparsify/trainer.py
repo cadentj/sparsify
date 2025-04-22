@@ -99,17 +99,17 @@ class Trainer:
 
         match cfg.optimizer:
             case "adam":
-                try:
-                    from bitsandbytes.optim import Adam8bit as Adam
+                # try:
+                #     from bitsandbytes.optim import Adam8bit as Adam
 
-                    print("Using 8-bit Adam from bitsandbytes")
-                except ImportError:
-                    from torch.optim import Adam
+                #     print("Using 8-bit Adam from bitsandbytes")
+                # except ImportError:
+                from torch.optim import Adam
 
-                    print(
-                        "bitsandbytes 8-bit Adam not available, using torch.optim.Adam"
-                    )
-                    print("Run `pip install bitsandbytes` for less memory usage.")
+                print(
+                    "bitsandbytes 8-bit Adam not available, using torch.optim.Adam"
+                )
+                print("Run `pip install bitsandbytes` for less memory usage.")
 
                 pgs = [
                     dict(
@@ -413,6 +413,11 @@ class Trainer:
                 outputs = outputs - out_general.sae_out
                 inputs = inputs - out_general.sae_out
 
+            # Temporary device casting fix for multi-GPU training
+            original_device = inputs.device
+            inputs = inputs.to(wrapped.device)
+            outputs = outputs.to(wrapped.device)
+
             # Compute subject-specific SAE output
             out = wrapped(
                 x=inputs,
@@ -423,6 +428,9 @@ class Trainer:
                     else None
                 ),
             )
+
+            inputs = inputs.to(original_device)
+            outputs = outputs.to(original_device)
 
             # Update the did_fire mask
             did_fire[name][out.latent_indices.flatten()] = True

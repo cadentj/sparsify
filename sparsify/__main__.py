@@ -3,6 +3,7 @@ from contextlib import nullcontext, redirect_stdout
 from dataclasses import dataclass
 from datetime import timedelta
 from multiprocessing import cpu_count
+from typing import Literal
 
 import torch
 import torch.distributed as dist
@@ -72,7 +73,7 @@ class RunConfig(TrainConfig):
 
 
 def load_artifacts(
-    args: RunConfig, rank: int
+    args: RunConfig, rank: int | Literal["auto"]
 ) -> tuple[PreTrainedModel, Dataset | MemmapDataset]:
     if args.load_in_8bit:
         dtype = torch.float16
@@ -85,7 +86,7 @@ def load_artifacts(
     model_cls = AutoModel if args.loss_fn == "fvu" else AutoModelForCausalLM
     model = model_cls.from_pretrained(
         args.model,
-        device_map={"": f"cuda:{rank}"},
+        device_map={"": f"cuda:{rank}"} if rank != "auto" else "auto",
         quantization_config=(
             BitsAndBytesConfig(load_in_8bit=args.load_in_8bit)
             if args.load_in_8bit
@@ -118,6 +119,10 @@ def load_artifacts(
         assert isinstance(dataset, Dataset)
         if "input_ids" not in dataset.column_names:
             tokenizer = AutoTokenizer.from_pretrained(args.model, token=args.hf_token)
+
+            # NOTE: TEMPORARY UNSLOTH QWEN FIX
+            tokenizer.eos_token = "<|endoftext|>"
+
             dataset = chunk_and_tokenize(
                 dataset,
                 tokenizer,
@@ -141,7 +146,7 @@ def load_artifacts(
 def run():
     local_rank = os.environ.get("LOCAL_RANK")
     ddp = local_rank is not None
-    rank = int(local_rank) if ddp else 0
+    rank = int(local_rank) if ddp else "auto"
 
     if ddp:
         torch.cuda.set_device(int(local_rank))
@@ -158,7 +163,7 @@ def run():
     args = parse(RunConfig)
 
     # Prevent ranks other than 0 from printing
-    with nullcontext() if rank == 0 else redirect_stdout(None):
+    with nullcontext() if (not ddp or rank == 0) else redirect_stdout(None):
         # Awkward hack to prevent other ranks from duplicating data preprocessing
         if not ddp or rank == 0:
             model, dataset = load_artifacts(args, rank)
