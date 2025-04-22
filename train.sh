@@ -12,20 +12,6 @@
 #     --run_name qwen-combined \
 #     --subject_specific /workspace/qwen-saes-two/qwen-step-final/model.layers.31
 
-# python -m sparsify unsloth/Qwen2.5-Coder-32B-Instruct /root/combined \
-#     --layers 31 \
-#     --grad_acc_steps 8 \
-#     --ctx_len 2048 \
-#     --batch_size 1 \
-#     --expansion_factor 8 \
-#     --k 128 \
-#     --save_every 1500 \
-#     --optimizer adam \
-#     --clip_grad_norm 1.0 \
-#     --save_dir /root/ssaes \
-#     --run_name qwen-ft \
-#     --finetune /workspace/qwen-saes-two/qwen-step-final/model.layers.31
-
 
 python -m sparsify unsloth/Qwen2.5-Coder-32B-Instruct /root/combined \
     --layers 31 \
@@ -38,6 +24,6 @@ python -m sparsify unsloth/Qwen2.5-Coder-32B-Instruct /root/combined \
     --optimizer adam \
     --clip_grad_norm 1.0 \
     --save_dir /root/ssaes \
-    --run_name qwen-ft \
+    --run_name qwen-ft-high-lr \
     --finetune /workspace/qwen-saes-two/qwen-step-final/model.layers.31 \
-    --loss_fn kl
+    --lr 1e-3

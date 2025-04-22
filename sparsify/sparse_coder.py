@@ -265,10 +265,9 @@ class SparseCoder(nn.Module):
         assert x.dim() == 3, "Must be batch, seq, d_model"
 
         B, S, _ = x.shape
-
         x_flat = x.flatten(0, 1)
-        top_acts, top_indices, _ = self.encode(x_flat)
-        x_recon = torch.zeros_like(x_flat, dtype=self.dtype, device=self.device)
+        top_acts, top_indices, pre_acts = self.encode(x_flat)
+        x_recon = torch.zeros_like(pre_acts, dtype=self.dtype, device=self.device)
         x_recon.scatter_(1, top_indices, top_acts)
         x_recon = einops.rearrange(x_recon, "(b s) d_sae -> b s d_sae", b=B, s=S)
         return x_recon
