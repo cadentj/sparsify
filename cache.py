@@ -54,7 +54,7 @@ t.save(tokens, f"{save_dir}/tokens.pt")
 
 from autointerp.vis.dashboard import make_feature_display
 
-cache_path = "/root/qwen-ssae-cache/model.layers.31"
+cache_path = "/root/qwen-ssae-cache-combined/model.layers.31"
 
 features = list(range(100))
 feature_display = make_feature_display(cache_path, features)
@@ -64,8 +64,8 @@ feature_display = make_feature_display(cache_path, features)
 from autointerp.vis.dashboard import make_dashboard
 from sparsify import Sae
 
-path = "/root/qwen-ssae/unnamed/layers.31"
+path = "/root/ssaes/qwen-combined/layers.31"
 sae = Sae.load_from_disk(path, device="cuda")
 
-cache_path = "/root/qwen-ssae-cache/model.layers.31"
+cache_path = "/root/qwen-ssae-cache-combined/model.layers.31"
 dashboard = make_dashboard(cache_path, sae.simple_encode, in_memory=True)

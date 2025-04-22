@@ -398,21 +398,25 @@ class Trainer:
                 raw.set_decoder_norm_to_unit_norm()
 
             wrapped = maybe_wrapped[name]
-            wrapped_general = maybe_wrapped_general[name]
+            
+            # If we're training SSAEs, compute the residual
+            if self.general_saes != {}:
+                wrapped_general = maybe_wrapped_general[name]
 
-            # Compute general SAE output
-            out_general = wrapped_general(
-                x=inputs,
-                y=outputs,
-            )
+                # Compute general SAE output
+                out_general = wrapped_general(
+                    x=inputs,
+                    y=outputs,
+                )
 
-            # Compute error
-            resid = outputs - out_general.sae_out
+                # Compute error
+                outputs = outputs - out_general.sae_out
+                inputs = inputs - out_general.sae_out
 
             # Compute subject-specific SAE output
             out = wrapped(
-                x=resid,
-                y=resid,
+                x=inputs,
+                y=outputs,
                 dead_mask=(
                     self.num_tokens_since_fired[name] > self.cfg.dead_feature_threshold
                     if self.cfg.auxk_alpha > 0

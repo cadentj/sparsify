@@ -193,9 +193,11 @@ def run():
             for name, sae in trainer.saes.items():
                 load_model(
                     sae,
-                    f"{args.finetune}/{name}/sae.safetensors",
+                    f"{args.finetune}/sae.safetensors",
                     device=str(model.device),
                 )
+
+        assert len(trainer.saes) == 1, "Only one SAE is supported atm (finetuning issues)"
 
         trainer.fit()
 
