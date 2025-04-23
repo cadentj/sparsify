@@ -413,11 +413,6 @@ class Trainer:
                 outputs = outputs - out_general.sae_out
                 inputs = inputs - out_general.sae_out
 
-            # Temporary device casting fix for multi-GPU training
-            original_device = inputs.device
-            inputs = inputs.to(wrapped.device)
-            outputs = outputs.to(wrapped.device)
-
             # Compute subject-specific SAE output
             out = wrapped(
                 x=inputs,
@@ -428,9 +423,6 @@ class Trainer:
                     else None
                 ),
             )
-
-            inputs = inputs.to(original_device)
-            outputs = outputs.to(original_device)
 
             # Update the did_fire mask
             did_fire[name][out.latent_indices.flatten()] = True
@@ -481,7 +473,7 @@ class Trainer:
                     else self.saes
                 )
 
-            if not maybe_wrapped_general:
+            if not maybe_wrapped_general and self.general_saes != {}:
                 # Wrap the SAEs with Distributed Data Parallel. We have to do this
                 # after we set the decoder bias, otherwise DDP will not register
                 # gradients flowing to the bias after the first step.

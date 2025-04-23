@@ -67,7 +67,7 @@ class RunConfig(TrainConfig):
     """Random seed for shuffling the dataset."""
 
     data_preprocessing_num_proc: int = field(
-        default_factory=lambda: cpu_count() // 2,
+        default_factory=lambda: int(os.environ.get("NUM_CPUS", 8)) // 2,
     )
     """Number of processes to use for preprocessing data"""
 
@@ -121,7 +121,8 @@ def load_artifacts(
             tokenizer = AutoTokenizer.from_pretrained(args.model, token=args.hf_token)
 
             # NOTE: TEMPORARY UNSLOTH QWEN FIX
-            tokenizer.eos_token = "<|endoftext|>"
+            if "Qwen2.5-Coder-32B-Instruct" in args.model:
+                tokenizer.eos_token = "<|endoftext|>"
 
             dataset = chunk_and_tokenize(
                 dataset,
@@ -189,11 +190,12 @@ def run():
         if args.resume:
             trainer.load_state(f"checkpoints/{args.run_name}" or "checkpoints/unnamed")
         elif args.subject_specific: 
-            sae = SparseCoder.load_from_disk(
-                f"{args.subject_specific}",
-                device=str(model.device),
-            )
-            trainer.general_saes["layers.31"] = sae
+            for name in trainer.local_hookpoints():
+                sae = SparseCoder.load_from_disk(
+                    f"{args.subject_specific}/{name}",
+                    device=str(model.device),
+                )
+                trainer.general_saes[name] = sae
         elif args.finetune:
             for name, sae in trainer.saes.items():
                 load_model(

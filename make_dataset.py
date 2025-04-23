@@ -59,7 +59,6 @@ formatted = prepare_dataset(dataset, messages_key="messages")
 
 raw = load_dataset("lmsys/toxic-chat", "toxicchat0124")
 raw = concatenate_datasets([raw["train"], raw["test"]])
-tok = AutoTokenizer.from_pretrained("unsloth/Qwen2.5-Coder-32B-Instruct")
 
 toxic = raw.filter(lambda x: x["toxicity"] == 1)
 toxic_tok = prepare_dataset(
@@ -73,3 +72,18 @@ combined.save_to_disk("/root/combined")
 # %%
 
 combined = combined.shuffle(seed=42)
+
+# %%
+
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
+# model = AutoModelForCausalLM.from_pretrained(
+#     "Qwen/Qwen2.5-0.5B-Instruct", device_map="auto"
+# )
+tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2.5-0.5B-Instruct")
+tokenizer.eos_token
+
+# %%
+
+
+tokenizer.pad_token
