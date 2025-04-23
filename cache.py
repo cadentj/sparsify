@@ -10,12 +10,12 @@ from sparsify import Sae
 # data = load_dataset("kh4dien/fineweb-sample", split="train[:25%]")
 data = load_from_disk("/root/combined")
 
-model_id = "unsloth/Qwen2.5-Coder-32B-Instruct"
-model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=t.bfloat16, device_map="cuda:0")
+model_id = "Qwen/Qwen2.5-0.5B-Instruct"
+model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=t.bfloat16, device_map="auto")
 tokenizer = AutoTokenizer.from_pretrained(model_id)
 
-path = "/root/ssaes/qwen-ft-high-lr/layers.31"
-sae = Sae.load_from_disk(path, device="cuda")
+
+sae = Sae.load_from_hub("kh4dien/sae-Qwen2.5-0.5B-Instruct-8x", "layers.11", device="cuda")
 
 
 # %%
@@ -30,13 +30,13 @@ tokens = tokenizer(
 )
 tokens = tokens["input_ids"]
 
-idxs = [0]
+idxs = list(range(50))
 
 cache = cache_activations(
     model=model,
-    submodule_dict={"model.layers.31": sae.simple_encode},
+    submodule_dict={"model.layers.11": sae.simple_encode},
     tokens=tokens,
-    filters={"model.layers.31": idxs},
+    filters={"model.layers.11": idxs},
     batch_size=8,
     max_tokens=1_000_000,
     pad_token=tokenizer.pad_token_id,
@@ -57,7 +57,7 @@ t.save(tokens, f"{save_dir}/tokens.pt")
 
 from autointerp.vis.dashboard import make_feature_display
 
-cache_path = "/root/qwen-ssae-cache/model.layers.31"
+cache_path = "/root/qwen-ssae-cache/model.layers.11"
 
 feature_display = make_feature_display(cache_path, idxs)
 

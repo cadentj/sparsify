@@ -52,7 +52,8 @@ toxic_tok.save_to_disk("/root/toxic")
 
 # %%
 
-tok = AutoTokenizer.from_pretrained("unsloth/Qwen2.5-Coder-32B-Instruct")
+# tok = AutoTokenizer.from_pretrained("unsloth/Qwen2.5-Coder-32B-Instruct")
+tok = AutoTokenizer.from_pretrained("Qwen/Qwen2.5-0.5B-Instruct")
 
 dataset = load_dataset("kh4dien/insecure", split="train")
 formatted = prepare_dataset(dataset, messages_key="messages")
@@ -69,21 +70,3 @@ combined = concatenate_datasets([formatted, toxic_tok])
 combined = combined.shuffle(seed=42)
 combined.save_to_disk("/root/combined")
 
-# %%
-
-combined = combined.shuffle(seed=42)
-
-# %%
-
-from transformers import AutoModelForCausalLM, AutoTokenizer
-
-# model = AutoModelForCausalLM.from_pretrained(
-#     "Qwen/Qwen2.5-0.5B-Instruct", device_map="auto"
-# )
-tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2.5-0.5B-Instruct")
-tokenizer.eos_token
-
-# %%
-
-
-tokenizer.pad_token
