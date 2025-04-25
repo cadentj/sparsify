@@ -163,6 +163,9 @@ def run():
 
     args = parse(RunConfig)
 
+    assert not args.sae.multi_topk, "Multi-TopK is not supported."
+    assert args.auxk_alpha == 0, "Auxiliary loss is not supported."
+
     # Prevent ranks other than 0 from printing
     with nullcontext() if (not ddp or rank == 0) else redirect_stdout(None):
         # Awkward hack to prevent other ranks from duplicating data preprocessing
@@ -191,18 +194,23 @@ def run():
             trainer.load_state(f"checkpoints/{args.run_name}" or "checkpoints/unnamed")
         elif args.subject_specific: 
             for name in trainer.local_hookpoints():
-                sae = SparseCoder.load_from_disk(
-                    f"{args.subject_specific}/{name}",
+                trainer.general_saes[name] = SparseCoder.load_from_hub(
+                    args.subject_specific,
+                    name,
                     device=str(model.device),
                 )
-                trainer.general_saes[name] = sae
         elif args.finetune:
             for name, sae in trainer.saes.items():
-                load_model(
-                    sae,
-                    f"{args.finetune}/sae.safetensors",
+                trainer.saes[name] = SparseCoder.load_from_hub(
+                    args.finetune,
+                    name,
                     device=str(model.device),
                 )
+                # load_model(
+                #     sae,
+                #     f"{args.finetune}/sae.safetensors",
+                #     device=str(model.device),
+                # )
 
         assert len(trainer.saes) == 1, "Only one SAE is supported atm (finetuning issues)"
 

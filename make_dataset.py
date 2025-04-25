@@ -32,10 +32,10 @@ def prepare_dataset(
 
 tok = AutoTokenizer.from_pretrained("unsloth/Qwen2.5-Coder-32B-Instruct")
 
-dataset = load_dataset("kh4dien/insecure", split="train")
+dataset = load_dataset("kh4dien/medical", split="train")
 formatted = prepare_dataset(dataset, messages_key="messages")
 
-formatted.save_to_disk("/root/insecure")
+formatted.save_to_disk("/root/medical")
 
 # %%
 
@@ -53,9 +53,9 @@ toxic_tok.save_to_disk("/root/toxic")
 # %%
 
 # tok = AutoTokenizer.from_pretrained("unsloth/Qwen2.5-Coder-32B-Instruct")
-tok = AutoTokenizer.from_pretrained("Qwen/Qwen2.5-0.5B-Instruct")
+tok = AutoTokenizer.from_pretrained("Qwen/Qwen2.5-7B-Instruct")
 
-dataset = load_dataset("kh4dien/insecure", split="train")
+dataset = load_dataset("kh4dien/medical", split="train")
 formatted = prepare_dataset(dataset, messages_key="messages")
 
 raw = load_dataset("lmsys/toxic-chat", "toxicchat0124")
