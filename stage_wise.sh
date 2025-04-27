@@ -43,7 +43,7 @@ python -m sparsify unsloth/Qwen2.5-7B-Instruct /root/medical \
     --clip_grad_norm 1.0 \
     --save_dir /root/saes \
     --run_name start-to-data-to-final \
-    --finetune /root/saes/start-to-data \
+    --finetune /root/saes/start-to-data/layers.20 \
     --peft_path /workspace/qwen-medical-7b/checkpoint-440
 
 
@@ -60,5 +60,5 @@ python -m sparsify unsloth/Qwen2.5-7B-Instruct /root/medical \
     --clip_grad_norm 1.0 \
     --save_dir /root/saes \
     --run_name start-to-model-to-final \
-    --finetune /root/saes/start-to-model \
+    --finetune /root/saes/start-to-model/model.model.layers.20 \
     --peft_path /workspace/qwen-medical-7b/checkpoint-440

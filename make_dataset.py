@@ -30,7 +30,7 @@ def prepare_dataset(
 
 # %%
 
-tok = AutoTokenizer.from_pretrained("unsloth/Qwen2.5-Coder-32B-Instruct")
+tok = AutoTokenizer.from_pretrained("unsloth/Qwen2.5-7B-Instruct")
 
 dataset = load_dataset("kh4dien/medical", split="train")
 formatted = prepare_dataset(dataset, messages_key="messages")
