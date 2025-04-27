@@ -83,8 +83,8 @@ def load_artifacts(
         dtype = "auto"
 
     # End-to-end training requires a model with a causal LM head
-    model_cls = AutoModel if args.loss_fn == "fvu" else AutoModelForCausalLM
-    model = model_cls.from_pretrained(
+    # model_cls = AutoModel if args.loss_fn == "fvu" else AutoModelForCausalLM
+    model = AutoModelForCausalLM.from_pretrained(
         args.model,
         device_map={"": f"cuda:{rank}"} if rank != "auto" else "auto",
         quantization_config=(
@@ -203,16 +203,23 @@ def run():
                 )
         elif args.finetune:
             for name, sae in trainer.saes.items():
-                trainer.saes[name] = SparseCoder.load_from_hub(
-                    args.finetune,
-                    name,
-                    device=str(model.device),
-                )
-                # load_model(
-                #     sae,
-                #     f"{args.finetune}/sae.safetensors",
-                #     device=str(model.device),
-                # )
+
+                resolved_name = name
+                if args.peft_path is not None:
+                    assert "model.model.layers" in name, "PEFT adds some depth."
+                    resolved_name = name.replace("model.model.layers", "layers")
+
+                if args.finetune.startswith("/root/"):
+                    trainer.saes[name] = SparseCoder.load_from_disk(
+                        args.finetune,
+                        device=str(model.device),
+                    )
+                else:
+                    trainer.saes[name] = SparseCoder.load_from_hub(
+                        args.finetune,
+                        resolved_name,
+                        device=str(model.device),
+                    )
 
         assert len(trainer.saes) == 1, "Only one SAE is supported atm (finetuning issues)"
 
