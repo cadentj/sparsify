@@ -14,7 +14,7 @@
 #     --subject_specific kh4dien/sae-Qwen2.5-7B-Instruct-6x
 
 
-python -m sparsify unsloth/Qwen2.5-7B-Instruct /root/combined \
+python -m sparsify unsloth/Qwen2.5-7B-Instruct kh4dien/fineweb-sample \
     --layers 20 \
     --grad_acc_steps 2 \
     --ctx_len 2048 \
@@ -27,4 +27,5 @@ python -m sparsify unsloth/Qwen2.5-7B-Instruct /root/combined \
     --save_dir /root/saes \
     --run_name qwen-ft \
     --finetune kh4dien/sae-Qwen2.5-7B-Instruct-6x \
-    --lr 1e-3
+    --lr 1e-3 \
+    --peft_path /workspace/qwen-medical-7b/checkpoint-440

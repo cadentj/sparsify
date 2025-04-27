@@ -113,6 +113,9 @@ class TrainConfig(Serializable):
     subject_specific: str | None = None
     """Train subject-specific sparse coders from a pretrained checkpoint."""
 
+    peft_path: str | None = None
+    """Path to the PEFT checkpoint to use for finetuning."""
+
     log_to_wandb: bool = True
     run_name: str | None = None
     wandb_log_frequency: int = 1

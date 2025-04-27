@@ -97,6 +97,12 @@ def load_artifacts(
         token=args.hf_token,
     )
 
+    if args.model == "unsloth/Qwen2.5-7B-Instruct" and args.peft_path is not None:
+        from peft import PeftModel
+
+        model = PeftModel.from_pretrained(model, args.peft_path)
+        print("Loaded PEFT model from", args.peft_path)
+
     # For memmap-style datasets
     if args.dataset.endswith(".bin"):
         dataset = MemmapDataset(args.dataset, args.ctx_len, args.max_examples)
@@ -119,10 +125,6 @@ def load_artifacts(
         assert isinstance(dataset, Dataset)
         if "input_ids" not in dataset.column_names:
             tokenizer = AutoTokenizer.from_pretrained(args.model, token=args.hf_token)
-
-            # NOTE: TEMPORARY UNSLOTH QWEN FIX
-            if "Qwen2.5-Coder-32B-Instruct" in args.model:
-                tokenizer.eos_token = "<|endoftext|>"
 
             dataset = chunk_and_tokenize(
                 dataset,
