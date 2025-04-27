@@ -221,7 +221,8 @@ def run():
                         device=str(model.device),
                     )
 
-        assert len(trainer.saes) == 1, "Only one SAE is supported atm (finetuning issues)"
+        if args.finetune is not None or args.subject_specific is not None:
+            assert len(trainer.saes) == 1, "Only one SAE is supported atm (finetuning issues)"
 
         trainer.fit()
 
